@@ -1,0 +1,119 @@
+
+
+
+
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
+	_ "github.com/mattn/go-sqlite3"
+	"image/color"
+	"log"
+	"math/rand"
+	"time"
+)
+
+func main() {
+	myApp := app.New()
+	myWindow := myApp.NewWindow("Typing Dojo")
+
+	// Colors
+	blue := color.NRGBA{R: 0, G: 0, B: 180, A: 255}
+	green := color.NRGBA{R: 0, G: 180, B: 0, A: 255}
+	white := color.White
+
+	// Text Widgets
+	userInput := widget.NewEntry()
+	userInput.TextSize = 20
+
+	targetText := canvas.NewText("ok", white)
+	targetText.TextSize = 20
+
+	detailText := canvas.NewText("", white)
+	detailText.TextSize = 20
+
+	statusLabel := widget.NewLabel("All: cmd+a, Delete: any")
+
+	// Form
+	form := &widget.Form{}
+	form.Append("", userInput)
+
+	// Database Initialization
+	minDB := 1
+	maxDB := getTailID()
+
+	// Goroutine for Typing
+	go func() {
+		for {
+			userInputText := userInput.Text
+
+			if targetText.Text == userInputText {
+				rand.Seed(time.Now().UnixNano())
+				detail, snipet := getDataFromDB(rand.Intn(maxDB-minDB+1) + minDB)
+
+				detailText.Text = detail
+				targetText.Text = snipet
+
+				targetText.Refresh()
+				detailText.Refresh()
+			}
+
+			time.Sleep(50 * time.Millisecond)
+		}
+	}()
+
+	// Window Setup
+	myWindow.SetContent(container.NewVBox(detailText, targetText, userInput, statusLabel, form))
+	myWindow.Resize(fyne.NewSize(300, 150))
+	myWindow.ShowAndRun()
+}
+
+func getDataFromDB(id int) (string, string) {
+	// Return detail and snippet
+	db, err := sql.Open("sqlite3", "dataset.db")
+	if err != nil {
+		log.Println(err)
+	}
+	defer db.Close()
+
+	rows, err := db.Query("SELECT * FROM snippets WHERE id = ?", id)
+	if err != nil {
+		log.Println(err)
+	}
+	defer rows.Close()
+
+	var detail string
+	var snippet string
+
+	for rows.Next() {
+		var id int
+		err := rows.Scan(&id, &detail, &snippet)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+	return detail, snippet
+}
+
+func getTailID() int {
+	db, err := sql.Open("sqlite3", "dataset.db")
+	if err != nil {
+		log.Println(err)
+	}
+	query := "SELECT * FROM snippets ORDER BY id DESC"
+	row := db.QueryRow(query)
+	var id int
+	var detail string
+	var snippet string
+	err = row.Scan(&id, &detail, &snippet)
+	if err != nil {
+		log.Println(err)
+	}
+	return id
+}
