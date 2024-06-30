@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
@@ -44,7 +43,6 @@ func main() {
 		for {
 			text.Text = "" + textArea.Text
 			text.Color = green
-			fmt.Println(text.Text)
 			text.Refresh()
 
 			if target_text.Text == text.Text {
